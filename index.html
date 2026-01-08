@@ -136,8 +136,8 @@
             <h1 style="font-family: var(--font-head); color: #fff; margin-bottom: 8px; font-size: 32px;">ANRITVOX IMS</h1>
             <p style="color:var(--text-mute); margin-bottom:32px; font-size:13px;">INVENTORY MANAGEMENT SYSTEM</p>
             <div id="login-form">
-                <input type="text" id="l-u" placeholder="System ID" value="admin" style="text-align:center; background:rgba(0,0,0,0.5); font-family:var(--font-code);" onkeypress="if(event.key==='Enter') document.getElementById('l-p').focus()">
-                <input type="password" id="l-p" placeholder="Access Key" value="admin" style="text-align:center; background:rgba(0,0,0,0.5); margin-bottom:20px; font-family:var(--font-code);" onkeypress="if(event.key==='Enter') AV.Auth.login()">
+                <input type="text" id="l-u" placeholder="System ID" value="" style="text-align:center; background:rgba(0,0,0,0.5); font-family:var(--font-code);" onkeypress="if(event.key==='Enter') document.getElementById('l-p').focus()">
+                <input type="password" id="l-p" placeholder="Access Key" value="" style="text-align:center; background:rgba(0,0,0,0.5); margin-bottom:20px; font-family:var(--font-code);" onkeypress="if(event.key==='Enter') AV.Auth.login()">
                 <button class="btn btn-pri full-w" onclick="AV.Auth.login()">INITIALIZE SYSTEM</button>
             </div>
             <div id="db-load-status" class="hidden" style="color:var(--neon-blue); margin-top:15px; font-family:var(--font-code);">LOADING MODULES...</div>
