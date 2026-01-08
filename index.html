@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Anritvox Inventory Management System</title>
+    
+    <!-- FONTS & LIBS -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Rajdhani:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg-deep: #050505; --bg-panel: #0a0a0a;
+            --neon-blue: #3b82f6; --neon-cyan: #06b6d4; --neon-green: #10b981; 
+            --neon-pink: #ec4899; --neon-purple: #8b5cf6; --neon-gold: #f59e0b;
+            --text-main: #f8fafc; --text-mute: #94a3b8; 
+            --border-glass: 1px solid rgba(255, 255, 255, 0.08);
+            --border-active: 1px solid rgba(59, 130, 246, 0.4);
+            --font-ui: 'Inter', sans-serif; --font-head: 'Rajdhani', sans-serif; --font-code: 'JetBrains Mono', monospace;
+            --rad: 16px;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; outline:none; -webkit-tap-highlight-color:transparent; }
+        body { 
+            background: radial-gradient(circle at 0% 0%, rgba(59, 130, 246, 0.05), transparent 40%), radial-gradient(circle at 100% 100%, rgba(139, 92, 246, 0.05), transparent 40%), var(--bg-deep);
+            color: var(--text-main); font-family: var(--font-ui); height: 100vh; overflow: hidden; display: flex; font-size: 14px; letter-spacing: -0.01em;
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--neon-blue); }
+
+        .hidden { display:none !important; }
+        .flex { display:flex; gap:12px; align-items:center; }
+        .flex-col { display:flex; flex-direction:column; gap:12px; }
+        .between { justify-content:space-between; }
+        .grid-4 { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:20px; }
+        .grid-2 { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:20px; }
+        .grid-3 { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:20px; }
+        .full-w { width:100%; }
+        .text-sm { font-size: 12px; color: var(--text-mute); }
+        .mt-2 { margin-top: 20px; } .mb-2 { margin-bottom: 20px; }
+        .mono { font-family: var(--font-code); }
+        .bold { font-weight: 600; color: #fff; }
+        
+        .glass { background: rgba(20, 20, 25, 0.6); backdrop-filter: blur(20px); border: var(--border-glass); border-radius: var(--rad); padding: 24px; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 0 1px rgba(255,255,255,0.02); }
+        .glass:hover { border-color: rgba(255,255,255,0.15); box-shadow: 0 20px 40px rgba(0,0,0,0.4); transform: translateY(-2px); }
+        h3 { font-family: var(--font-head); font-weight: 700; font-size: 18px; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; color: #fff; }
+        h3 i { color: var(--neon-blue); }
+
+        .btn { padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-family: var(--font-ui); font-weight: 600; font-size: 13px; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; color: #fff; position: relative; overflow: hidden; }
+        .btn-pri { background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple)); box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3); }
+        .btn-pri:hover { box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5); filter: brightness(1.1); }
+        .btn-sec { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: var(--text-mute); }
+        .btn-sec:hover { background: rgba(255,255,255,0.08); color: #fff; border-color: rgba(255,255,255,0.2); }
+        .btn-dan { background: rgba(236, 72, 153, 0.1); color: var(--neon-pink); border: 1px solid rgba(236, 72, 153, 0.2); }
+        .btn-dan:hover { background: rgba(236, 72, 153, 0.2); box-shadow: 0 0 15px rgba(236, 72, 153, 0.2); }
+        .btn-sm { padding: 6px 12px; font-size: 11px; border-radius: 6px; }
+        
+        input, select, textarea { width: 100%; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 12px 16px; border-radius: 8px; font-family: var(--font-ui); font-size: 13px; transition: 0.3s; margin-bottom: 8px; }
+        input:focus, select:focus, textarea:focus { border-color: var(--neon-blue); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); background: rgba(0,0,0,0.6); }
+        label { font-size:11px; color: var(--neon-cyan); font-weight:600; margin:0 0 6px 2px; display:block; letter-spacing: 0.5px; }
+        
+        .table-wrap { overflow-x: auto; border-radius: 10px; border: var(--border-glass); background: rgba(0,0,0,0.2); }
+        table { width: 100%; border-collapse: collapse; white-space: nowrap; }
+        th { text-align: left; padding: 14px 16px; background: rgba(255,255,255,0.03); color: var(--text-mute); font-family: var(--font-head); font-weight: 700; font-size: 12px; letter-spacing: 1px; }
+        td { padding: 14px 16px; border-top: 1px solid rgba(255,255,255,0.05); color: var(--text-main); font-size: 13px; }
+        tr:hover td { background: rgba(255,255,255,0.02); }
+        
+        .tag { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; font-family: var(--font-code); border: 1px solid transparent; display: inline-block; }
+        .t-ok { color: #86efac; background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.2); } 
+        .t-bad { color: #f9a8d4; background: rgba(236, 72, 153, 0.15); border-color: rgba(236, 72, 153, 0.2); }
+        .t-info { color: #67e8f9; background: rgba(6, 182, 212, 0.15); border-color: rgba(6, 182, 212, 0.2); } 
+        .t-pri { color: #c4b5fd; background: rgba(139, 92, 246, 0.15); border-color: rgba(139, 92, 246, 0.2); }
+        .t-warn { color: #fcd34d; background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.2); }
+
+        .sub-tabs { display:flex; gap:8px; margin-bottom:20px; border-bottom:1px solid var(--border-glass); padding-bottom:12px; }
+        .tab-btn { background:transparent; border:none; color:var(--text-mute); padding:8px 16px; cursor:pointer; font-weight:600; font-size: 13px; border-radius:6px; transition:0.2s; }
+        .tab-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
+        .tab-btn.active { color:#fff; background:var(--neon-blue); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); }
+        .sub-view { display:none; } .sub-view.active { display:block; animation: fadeUp 0.3s ease-out; }
+        @keyframes fadeUp { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
+        
+        #app { display: none; width: 100%; height: 100%; }
+        .sidebar { width: 260px; background: #080808; border-right: var(--border-glass); display: flex; flex-direction: column; padding: 24px 0; z-index: 100; }
+        .brand { color: #fff; font-family: var(--font-head); font-size: 26px; font-weight: 800; margin-bottom: 40px; display: flex; align-items: center; padding-left: 24px; letter-spacing: 1px; }
+        .nav-head { font-size: 11px; color: var(--text-mute); text-transform: uppercase; margin: 24px 0 8px 24px; font-weight: 700; letter-spacing: 1px; opacity: 0.6; }
+        .nav-item { height: 44px; display: flex; align-items: center; color: var(--text-mute); cursor: pointer; padding: 0 24px; margin-bottom: 4px; transition:0.2s; font-weight: 500; border-left: 3px solid transparent; }
+        .nav-item:hover { color: #fff; background: rgba(255,255,255,0.03); }
+        .nav-item.active { color: var(--neon-cyan); background: rgba(6, 182, 212, 0.08); border-left-color: var(--neon-cyan); font-weight: 600; }
+        
+        .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: radial-gradient(circle at 50% -20%, rgba(59, 130, 246, 0.1), transparent 50%); }
+        .top-bar { height: 70px; padding: 0 32px; display: flex; align-items: center; justify-content: space-between; border-bottom: var(--border-glass); background: rgba(8,8,10,0.6); backdrop-filter: blur(10px); }
+        .content { padding: 32px; overflow-y: auto; height: calc(100% - 70px); }
+        .view { display: none; } .view.active { display: block; animation: fadeUp 0.3s; }
+
+        .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 5000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .modal { width: 550px; max-width: 95%; background: #0f0f11; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 32px; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        .modal h3 { border-left: 4px solid var(--neon-blue); padding-left: 16px; font-size: 20px; }
+        .stat-card { background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%); padding: 24px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); position: relative; overflow: hidden; }
+        .stat-card::after { content:''; position:absolute; top:0; left:0; width:100%; height:4px; background: var(--neon-blue); opacity: 0.7; }
+        .stat-val { font-size: 32px; font-weight: 800; color: #fff; font-family: var(--font-head); margin-bottom: 4px; }
+        .item-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 16px; border-radius: 10px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
+        .item-card:hover { background: rgba(6, 182, 212, 0.1); border-color: rgba(6, 182, 212, 0.3); }
+        
+        #toast-feed { position: fixed; bottom: 30px; right: 30px; z-index: 9000; pointer-events: none; display: flex; flex-direction: column; gap: 12px; }
+        .toast { pointer-events: auto; background: #18181b; border-left: 4px solid var(--neon-green); padding: 16px 20px; border-radius: 8px; color: #fff; animation: slideIn 0.3s ease; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); font-weight: 500; font-size: 13px; display: flex; align-items: center; gap: 10px; }
+        @keyframes slideIn { from{opacity:0; transform:translateX(20px);} to{opacity:1; transform:translateX(0);} }
+        #login-screen { position: fixed; inset: 0; background: #000; z-index: 10000; display: flex; align-items: center; justify-content: center; background-image: radial-gradient(circle at 50% 50%, #111 0%, #000 100%); }
+        .suggestion-box { position: absolute; top: 100%; left: 0; width: 100%; background: #18181b; border: 1px solid var(--border-active); z-index: 1000; max-height: 240px; overflow-y: auto; border-radius: 0 0 8px 8px; box-shadow: 0 10px 15px rgba(0,0,0,0.5); }
+        .sug-item { padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; display: flex; justify-content: space-between; transition: 0.2s; }
+        .sug-item:hover { background: rgba(59, 130, 246, 0.1); color: #fff; }
+
+        @media print { 
+            @page { size: A4; margin: 0; } body * { visibility: hidden; } #print-zone, #print-zone * { visibility: visible; } 
+            #print-zone { position: absolute; top:0; left:0; width:100%; background: #fff !important; color: #000 !important; padding: 20mm; z-index: 99999; display: block; font-family: 'Inter', sans-serif; }
+            .p-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 12px; }
+            .p-table th { border-bottom: 2px solid #000; text-align: left; padding: 8px; font-weight: 700; text-transform: uppercase; } 
+            .p-table td { padding: 10px 8px; border-bottom: 1px solid #ddd; }
+            .w-print-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5mm; width: 100%; }
+            .w-sticker { width: 100%; height: 35mm; border: 1px solid #000; padding: 3mm; display: flex; align-items: center; gap: 10px; font-size: 10px; border-radius: 4px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="toast-feed"></div>
+    <div id="login-screen">
+        <div style="width: 420px; padding: 48px; background: rgba(20,20,20,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; text-align: center; backdrop-filter: blur(20px);">
+            <div style="width:64px; height:64px; background:linear-gradient(135deg, var(--neon-blue), var(--neon-purple)); border-radius:16px; margin:0 auto 24px auto; display:flex; align-items:center; justify-content:center;">
+                <i class="ph-bold ph-hexagon" style="font-size: 32px; color: #fff;"></i>
+            </div>
+            <h1 style="font-family: var(--font-head); color: #fff; margin-bottom: 8px; font-size: 32px;">ANRITVOX IMS</h1>
+            <p style="color:var(--text-mute); margin-bottom:32px; font-size:13px;">INVENTORY MANAGEMENT SYSTEM</p>
+            <div id="login-form">
+                <input type="text" id="l-u" placeholder="System ID" value="admin" style="text-align:center; background:rgba(0,0,0,0.5); font-family:var(--font-code);" onkeypress="if(event.key==='Enter') document.getElementById('l-p').focus()">
+                <input type="password" id="l-p" placeholder="Access Key" value="admin" style="text-align:center; background:rgba(0,0,0,0.5); margin-bottom:20px; font-family:var(--font-code);" onkeypress="if(event.key==='Enter') AV.Auth.login()">
+                <button class="btn btn-pri full-w" onclick="AV.Auth.login()">INITIALIZE SYSTEM</button>
+            </div>
+            <div id="db-load-status" class="hidden" style="color:var(--neon-blue); margin-top:15px; font-family:var(--font-code);">LOADING MODULES...</div>
+            <div id="l-msg" style="color:var(--neon-pink); margin-top:15px; font-size:12px;"></div>
+            <div style="margin-top:30px; font-size:11px; color:#555; font-family:var(--font-code);">Developed by Akash Prasad</div>
+        </div>
+    </div>
+
+    <div id="app">
+        <aside class="sidebar">
+            <div class="brand"><i class="ph-fill ph-hexagon" style="color:var(--neon-blue); margin-right:12px"></i>ANRITVOX</div>
+            <div class="nav-head">Command</div><div class="nav-item active" onclick="AV.UI.nav('dash')"><i class="ph ph-squares-four" style="margin-right:12px"></i>Dashboard</div>
+            <div class="nav-head">Operations</div><div class="nav-item" onclick="AV.UI.nav('inv')"><i class="ph ph-cube" style="margin-right:12px"></i>Inventory</div>
+            <div class="nav-item" onclick="AV.UI.nav('trans')"><i class="ph ph-arrows-left-right" style="margin-right:12px"></i>Transfers</div>
+            <div class="nav-head">Commerce</div><div class="nav-item" onclick="AV.UI.nav('sale')"><i class="ph ph-shopping-cart" style="margin-right:12px"></i>Sales Point</div>
+            <div class="nav-item" onclick="AV.UI.nav('ret')"><i class="ph ph-arrow-u-up-left" style="margin-right:12px"></i>Returns</div>
+            <div class="nav-head">Network</div><div class="nav-item" onclick="AV.UI.nav('fin')"><i class="ph ph-chart-line-up" style="margin-right:12px"></i>Finance</div>
+            <div class="nav-item" onclick="AV.UI.nav('dist')"><i class="ph ph-users-three" style="margin-right:12px"></i>Distributors</div>
+            <div class="nav-item" onclick="AV.UI.nav('sup')"><i class="ph ph-share-network" style="margin-right:12px"></i>Mapping</div>
+            <div class="nav-head">System</div><div class="nav-item" onclick="AV.UI.nav('rep')"><i class="ph ph-wrench" style="margin-right:12px"></i>Tools</div>
+            <div class="nav-item" onclick="AV.UI.nav('data')"><i class="ph ph-database" style="margin-right:12px"></i>Data Mgmt</div>
+            <div class="nav-item" onclick="AV.UI.nav('audit')"><i class="ph ph-fingerprint" style="margin-right:12px"></i>Audit Logs</div>
+            <div style="margin-top:auto"></div>
+            <div style="padding: 0 24px 10px 24px; font-size:10px; color:#333; font-family:var(--font-code);">Developed by Akash Prasad</div>
+            <div class="nav-item" onclick="AV.Auth.logout()" style="color:var(--neon-pink)"><i class="ph ph-power" style="margin-right:12px"></i>Terminate</div>
+        </aside>
+
+        <main class="main">
+            <header class="top-bar">
+                <div class="flex"><div class="page-title" id="page-title" style="font-family:var(--font-head); font-size:24px; font-weight:800; color:#fff;">ANRITVOX IMS</div><div class="tag t-info" style="font-size:10px; opacity:0.8;">Developed by Akash Prasad</div></div>
+                <div class="flex"><span id="sys-date" class="text-sm mono" style="background:rgba(255,255,255,0.05); padding:6px 10px; border-radius:6px;"></span><div style="width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg, var(--neon-blue), var(--neon-cyan)); display:flex; align-items:center; justify-content:center; color:#000; font-weight:bold;">A</div></div>
+            </header>
+
+            <div class="content">
+                <!-- 1. DASHBOARD -->
+                <div id="v-dash" class="view active">
+                    <div class="grid-4 mb-2">
+                        <div class="stat-card" style="border-top-color:var(--neon-blue)"><div class="stat-val" id="d-val">₹0</div><div class="text-sm" style="color:var(--neon-blue)">TOTAL ASSETS</div></div>
+                        <div class="stat-card" style="border-top-color:var(--neon-green)"><div class="stat-val" id="d-rev">₹0</div><div class="text-sm" style="color:var(--neon-green)">GROSS REVENUE</div></div>
+                        <div class="stat-card" style="border-top-color:var(--neon-purple)"><div class="stat-val" id="d-prof">₹0</div><div class="text-sm" style="color:var(--neon-purple)">NET PROFIT</div></div>
+                        <div class="stat-card" style="border-top-color:var(--neon-pink)"><div class="stat-val" id="d-due">₹0</div><div class="text-sm" style="color:var(--neon-pink)">OUTSTANDING DUES</div></div>
+                    </div>
+                    <div class="grid-2 mt-2">
+                        <div class="glass"><h3><i class="ph ph-chart-bar"></i> Velocity Metrics</h3><canvas id="salesChart" style="max-height:240px"></canvas></div>
+                        <div class="glass" style="border-color:rgba(236, 72, 153, 0.2)">
+                            <div class="flex between"><h3 style="color:var(--neon-pink)"><i class="ph ph-siren" style="color:var(--neon-pink)"></i> Critical Stock</h3></div>
+                            <div id="war-room" style="margin-top:15px; max-height:220px; overflow-y:auto;" class="flex-col"></div>
+                        </div>
+                    </div>
+                    <div class="glass mt-2"><h3><i class="ph ph-activity"></i> Recent Activity</h3><div id="dash-log" class="flex-col" style="margin-top:15px;"></div></div>
+                </div>
+
+                <!-- 2. INVENTORY -->
+                <div id="v-inv" class="view">
+                    <div class="sub-tabs"><button class="tab-btn active" onclick="AV.UI.sub('inv','list',this)">Master Catalog</button><button class="tab-btn" onclick="AV.UI.sub('inv','ser',this)">Serialized Units</button></div>
+                    <div id="inv-list" class="sub-view active">
+                        <div class="glass">
+                            <div class="flex between mb-2"><h3>Inventory Master</h3><button class="btn btn-pri" onclick="AV.UI.invModalNew()"><i class="ph ph-plus-circle"></i> Mint Item</button></div>
+                            <div style="position:relative; margin-bottom:15px;"><i class="ph ph-magnifying-glass" style="position:absolute; left:12px; top:12px; color:var(--text-mute)"></i><input id="inv-s" placeholder="Search SKU, Name..." style="padding-left:36px;" onkeyup="AV.Util.debouncedInvRender(this.value)"></div>
+                            <div class="table-wrap"><table id="t-inv"><thead><tr><th>SKU</th><th>Name</th><th>Type</th><th>Stock (WH)</th><th>Loc</th><th>Cost</th><th>Price</th><th style="text-align:right">Actions</th></tr></thead><tbody></tbody></table></div>
+                        </div>
+                    </div>
+                    <div id="inv-ser" class="sub-view">
+                        <div class="glass">
+                            <div class="flex between mb-2">
+                                <h3>Unit Tracking</h3>
+                                <div class="flex"><input id="inv-ser-s" placeholder="Search Serial..." style="width:200px; margin:0;" onkeyup="AV.Inv.renderUnits()"><select id="inv-ser-f" style="width:150px; margin:0;" onchange="AV.Inv.renderUnits()"><option value="ALL">All Status</option><option value="WH">Warehouse</option><option value="SOLD">Sold</option><option value="DIST">Distributed</option></select></div>
+                            </div>
+                            <div class="table-wrap"><table id="t-units"><thead><tr><th>Serial ID</th><th>Item Name</th><th>Location</th><th>Status</th><th>Warranty End</th><th>Age (Days)</th></tr></thead><tbody></tbody></table></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. TRANSFERS -->
+                <div id="v-trans" class="view">
+                    <div class="grid-2">
+                        <div class="glass">
+                            <h3><i class="ph ph-paper-plane-tilt"></i> Dispatch Command</h3>
+                            <div class="grid-2 mt-2"><div><label>Target Agent</label><select id="tf-d"></select></div><div><label>Select Item</label><select id="tf-i" onchange="AV.Trans.upd()"></select></div></div>
+                            <div class="flex between mt-2" style="background:rgba(255,255,255,0.03); padding:10px; border-radius:8px;">
+                                <div>Available: <span id="tf-av" class="tag t-info bold" style="font-size:14px;">0</span></div>
+                                <div class="flex"><label style="margin:0">Qty:</label><input type="number" id="tf-q" value="1" style="width:100px; text-align:center; margin:0"></div>
+                            </div>
+                            <button class="btn btn-pri full-w mt-2" onclick="AV.Trans.exec()">EXECUTE DISPATCH</button>
+                        </div>
+                        <div class="glass"><h3><i class="ph ph-clock-counter-clockwise"></i> Transfer Log</h3><div class="table-wrap"><table id="t-tf"><thead><tr><th>Timestamp</th><th>Recipient</th><th>Item</th><th>Qty</th></tr></thead><tbody></tbody></table></div></div>
+                    </div>
+                </div>
+
+                <!-- 4. SALES -->
+                <div id="v-sale" class="view">
+                    <div class="sub-tabs"><button class="tab-btn active" onclick="AV.UI.sub('sale','pos',this)">POS Terminal</button><button class="tab-btn" onclick="AV.UI.sub('sale','hist',this)">Transaction History</button></div>
+                    <div id="sale-pos" class="sub-view active">
+                        <div class="grid-3">
+                            <div class="glass flex-col">
+                                <h3>1. Configuration</h3><label>Seller Profile</label><select id="sl-d" onchange="AV.Sale.upd()"></select>
+                                <label>Customer Identity</label><div style="position:relative"><input id="sl-c" placeholder="Search / New..." onkeyup="AV.Util.debSaleSug(this.value)"><div id="sl-sug" class="suggestion-box hidden"></div></div>
+                                <div class="flex mt-2" style="opacity:0.7"><input id="sl-uid" placeholder="Cust ID" disabled></div>
+                            </div>
+                            <div class="glass flex-col">
+                                <h3>2. Product Select</h3><label>Item</label><select id="sl-i"></select>
+                                <label>Warranty Term</label><select id="sl-w"><option value="0.5">6 Months</option><option value="1" selected>1 Year</option><option value="2">2 Years</option><option value="3">3 Years</option></select>
+                                <div class="flex" style="margin-top:auto"><input type="number" id="sl-q" value="1" style="text-align:center; font-weight:bold;"><button class="btn btn-sec" onclick="AV.Sale.addCart()"><i class="ph ph-plus"></i> Add</button></div>
+                            </div>
+                            <div class="glass flex-col" style="border-color:var(--neon-blue); background:rgba(59, 130, 246, 0.05);">
+                                <h3>3. Cart & Checkout</h3><div class="table-wrap" style="flex:1; max-height:200px; overflow-y:auto; background:rgba(0,0,0,0.3);"><table id="t-cart"><thead><tr><th>Item</th><th>Term</th><th>Qty</th><th>Sub</th><th></th></tr></thead><tbody></tbody></table></div>
+                                <div class="flex between" style="background:rgba(0,0,0,0.4); padding:10px; border-radius:8px;"><div class="text-sm">TOTAL AMOUNT</div><div style="font-weight:800; font-size:24px; color:var(--neon-blue);" id="sl-tot">₹0</div></div>
+                                <button class="btn btn-pri" onclick="AV.Sale.checkout()">PROCESS PAYMENT</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="sale-hist" class="sub-view"><div class="glass"><h3>Transaction Log</h3><div class="table-wrap"><table id="t-sl"><thead><tr><th>TXN ID</th><th>Date</th><th>Customer</th><th>Items</th><th style="text-align:right">Total</th></tr></thead><tbody></tbody></table></div></div></div>
+                </div>
+
+                <!-- 5. RETURNS -->
+                <div id="v-ret" class="view">
+                     <div class="glass" style="border-color:rgba(236, 72, 153, 0.3); max-width:800px; margin:0 auto;">
+                        <h3 style="color:var(--neon-pink)"><i class="ph ph-arrow-u-up-left"></i> RMA Protocol</h3><p class="text-sm mb-2">Process stock returns from distributors back to warehouse.</p>
+                        <div class="grid-2 mt-2"><div><label>Source Agent</label><select id="rt-d" onchange="AV.Ret.upd()"></select></div><div><label>Select Item</label><select id="rt-i"></select></div></div>
+                        <div class="mt-2"><label>Quantity Return</label><input type="number" id="rt-q" value="1"></div>
+                        <button class="btn btn-dan mt-2 full-w" onclick="AV.Ret.exec()">AUTHORIZE RETURN</button>
+                    </div>
+                </div>
+
+                <!-- 6. FINANCE -->
+                <div id="v-fin" class="view">
+                    <div class="sub-tabs"><button class="tab-btn active" onclick="AV.UI.sub('fin','dash',this)">Overview</button><button class="tab-btn" onclick="AV.UI.sub('fin','led',this)">Ledger</button></div>
+                    <div id="fin-dash" class="sub-view active">
+                        <div class="grid-2">
+                            <div class="glass">
+                                <h3>Agent Settlements</h3><label>Distributor</label><select id="fp-d" onchange="AV.Fin.upd()"></select>
+                                <div style="font-size:36px; font-weight:800; color:var(--neon-gold); margin:20px 0; font-family:var(--font-head);"><span class="text-sm" style="font-family:var(--font-ui); color:var(--text-mute); display:block;">CURRENT DUES</span><span id="fp-v">₹0</span></div>
+                                <div class="flex"><input type="number" id="fp-a" placeholder="Amount to settle"><button class="btn btn-pri" onclick="AV.Fin.pay()">PAY</button></div>
+                                <h4 class="mt-2 text-sm">Recent Payouts</h4><div class="table-wrap" style="max-height:200px;"><table id="t-payouts"><thead><tr><th>Time</th><th>Agent</th><th>Amt</th></tr></thead><tbody></tbody></table></div>
+                            </div>
+                            <div class="glass">
+                                <h3>OpEx Logging</h3><div class="flex-col"><label>Expense Description</label><input id="ex-d" placeholder="e.g. Server Maintenance"><label>Amount</label><input id="ex-a" type="number" placeholder="0.00"></div>
+                                <button class="btn btn-dan mt-2" onclick="AV.Fin.exp()">LOG EXPENSE</button><h4 class="mt-2 text-sm">Recent Expenses</h4><ul id="ex-l" class="mt-2 text-sm mono" style="list-style:none; opacity:0.8;"></ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="fin-led" class="sub-view"><div class="glass"><h3>Financial Ledger</h3><div class="table-wrap"><table id="t-led"><thead><tr><th>Date</th><th>Type</th><th>Ref/Desc</th><th>Debit</th><th>Credit</th></tr></thead><tbody></tbody></table></div></div></div>
+                </div>
+
+                <!-- 7. DISTRIBUTORS -->
+                <div id="v-dist" class="view">
+                    <div class="glass">
+                        <div class="flex between mb-2"><h3>Distributor Network</h3><button class="btn btn-pri" onclick="AV.UI.modal('m-add-dist')"><i class="ph ph-user-plus"></i> Add Agent</button></div>
+                        <div id="dist-grid" class="grid-4 mt-2"></div>
+                    </div>
+                </div>
+
+                <!-- 8. MAPPING -->
+                <div id="v-sup" class="view">
+                    <div class="glass">
+                        <h3>Seller Mapping</h3><p class="text-sm mb-2">Map external retail locations to distributors.</p>
+                        <div class="grid-2 mt-2"><div><input id="n-sell-name" placeholder="Shop Name"><input id="n-sell-addr" placeholder="Location"></div><div><select id="n-sell-dist"></select></div><button class="btn btn-pri" onclick="AV.Sellers.add()">Map Entity</button></div>
+                        <div class="table-wrap mt-2"><table id="t-sellers"><thead><tr><th>ID</th><th>Name</th><th>Parent Distributor</th></tr></thead><tbody></tbody></table></div>
+                    </div>
+                </div>
+
+                <!-- 9. TOOLS -->
+                <div id="v-rep" class="view">
+                    <div class="grid-2">
+                        <div class="glass" style="border-left:4px solid var(--neon-green)">
+                            <h3><i class="ph ph-shield-check"></i> Warranty Check</h3>
+                            <div class="flex mt-2"><input id="w-check-s" placeholder="Scan Serial Number"><button class="btn btn-sec" onclick="AV.Tools.checkW()">Verify</button></div>
+                            <div id="w-result" class="mt-2 font-head" style="font-size:18px;"></div>
+                        </div>
+                        <div class="glass hover-card" onclick="AV.Tools.openQ()" style="cursor:pointer; border-left:4px solid var(--neon-blue)"><h3><i class="ph ph-receipt"></i> Quote Engine</h3><p class="text-sm">Generate professional estimates and invoices.</p></div>
+                        <div class="glass hover-card" onclick="AV.Tools.openWP()" style="cursor:pointer; border-left:4px solid var(--neon-purple)"><h3><i class="ph ph-qr-code"></i> Label Printer</h3><p class="text-sm">Generate QR warranty stickers.</p></div>
+                        <div class="glass hover-card" onclick="AV.Tools.openPassMan()" style="cursor:pointer; border-left:4px solid var(--neon-gold)"><h3><i class="ph ph-lock-key"></i> Password Manager</h3><p class="text-sm">Manage access keys for critical zones.</p></div>
+                        <div class="glass"><h3><i class="ph ph-file-pdf"></i> System Reports</h3><div class="flex mt-2"><button class="btn btn-sec full-w" onclick="AV.Rep.stock()">Stock Report</button><button class="btn btn-sec full-w" onclick="AV.Rep.sales()">Sales Report</button></div></div>
+                    </div>
+                </div>
+
+                <!-- 10. AUDIT -->
+                <div id="v-audit" class="view">
+                    <div class="glass">
+                        <h3>System Audit Trail</h3>
+                        <div class="flex"><input id="aud-fil" placeholder="Filter Logs..." onkeyup="AV.Sys.refresh()"><button class="btn btn-sec" onclick="AV.Sys.refresh()">Search</button></div>
+                        <div id="full-log" class="mono text-sm mt-2" style="max-height:500px; overflow:auto; background:rgba(0,0,0,0.3); padding:15px; border-radius:8px;"></div>
+                    </div>
+                </div>
+                
+                <div id="v-data" class="view">
+                    <div class="glass">
+                        <h3>Data Management</h3>
+                        <p class="text-sm mb-2">✅ Backup files are encrypted and password-protected. Requires password to restore.</p>
+                        <div class="flex mt-2"><button class="btn btn-pri" onclick="AV.Sys.bkp()">Download Encrypted Backup</button><button class="btn btn-dan" onclick="AV.Sys.nuke()">Factory Reset</button></div>
+                        <div class="mt-2" style="border:1px dashed var(--text-mute); padding:20px; text-align:center; border-radius:10px;"><label>Restore from Backup</label><input type="password" id="restore-pass" placeholder="Enter Backup Password" style="margin-bottom:10px;" onkeypress="if(event.key==='Enter'){event.preventDefault();AV.Sys.rst(document.getElementById('backup-file'))}"><input type="file" id="backup-file" onchange="AV.Sys.rst(this)"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODALS -->
+    <div id="m-auth" class="modal-mask"><div class="modal" style="width:350px;">
+        <h3><i class="ph ph-lock-key"></i> Restricted Access</h3>
+        <p class="text-sm mb-2">Enter authorization key to proceed.</p>
+        <input type="password" id="auth-in" placeholder="Password" style="text-align:center; letter-spacing:3px;" onkeypress="if(event.key==='Enter') AV.Auth.verify()">
+        <button class="btn btn-pri full-w mt-2" onclick="AV.Auth.verify()">Unlock</button>
+        <button class="btn btn-sec full-w mt-2" onclick="AV.UI.closeM('m-auth')">Cancel</button>
+    </div></div>
+
+    <div id="m-pass-man" class="modal-mask"><div class="modal">
+        <h3><i class="ph ph-key"></i> Security Protocols</h3>
+        <div class="mt-2">
+            <label>Inventory Access Key</label><input id="pm-inv">
+            <label>Sales Access Key</label><input id="pm-sale">
+            <label>Returns Access Key</label><input id="pm-ret">
+            <label>Finance Access Key</label><input id="pm-fin">
+            <label>Factory Reset Key</label><input id="pm-reset">
+        </div>
+        <button class="btn btn-pri full-w mt-2" onclick="AV.Tools.savePass()">Update Keys</button>
+        <button class="btn btn-sec full-w mt-2" onclick="AV.UI.closeM('m-pass-man')">Close</button>
+    </div></div>
+
+    <div id="m-dist-details" class="modal-mask"><div class="modal modal-xl">
+        <div class="flex between"><h3 id="dd-name">Details</h3><span class="tag t-pri" id="dd-id"></span></div>
+        <div class="sub-tabs mt-2"><button class="tab-btn active" onclick="AV.UI.sub('dd','stock',this)">Current Stock</button><button class="tab-btn" onclick="AV.UI.sub('dd','sales',this)">Sales History</button></div>
+        <div id="v-dd"><div id="dd-stock" class="sub-view active"><div class="table-wrap"><table id="t-dd-stock"><thead><tr><th>Item</th><th>Type</th><th>Qty/Serial</th></tr></thead><tbody></tbody></table></div></div><div id="dd-sales" class="sub-view"></div></div>
+        <button class="btn btn-sec full-w mt-2" onclick="AV.UI.closeM('m-dist-details')">Close Panel</button>
+    </div></div>
+
+    <div id="m-sale-receipt" class="modal-mask"><div class="modal" style="width:400px;">
+        <h3><i class="ph ph-check-circle" style="color:var(--neon-green)"></i> Success</h3>
+        <div id="receipt-content" class="mono text-sm mt-2" style="border-top:1px dashed #333; padding-top:15px; color:#ccc;"></div>
+        <button class="btn btn-pri full-w mt-2" onclick="AV.UI.closeM('m-sale-receipt')">Done</button>
+    </div></div>
+
+    <div id="m-w-print" class="modal-mask"><div class="modal modal-xl">
+        <h3>Warranty Printer</h3>
+        <div class="flex"><input id="wp-txn" placeholder="Enter TXN ID"><button class="btn btn-pri" onclick="AV.Tools.searchW($('wp-txn').value)">Fetch</button></div>
+        <div id="wp-preview" style="background:#fff; color:#000; padding:10px; margin-top:15px; max-height:400px; overflow-y:auto; border-radius:4px;"></div>
+        <div class="flex mt-2"><button class="btn btn-pri" onclick="AV.Tools.printStickers()">Print Stickers</button><button class="btn btn-sec" onclick="AV.UI.closeM('m-w-print')">Close</button></div>
+    </div></div>
+
+    <div id="m-q" class="modal-mask"><div class="modal modal-xxl" style="width:900px">
+        <h3>Quote Builder</h3>
+        <div style="margin-bottom:15px; position:relative;"><input id="q-search" placeholder="Load Client..." onkeyup="AV.Util.debQuoteSug(this.value)"><div id="q-sug" class="suggestion-box hidden"></div></div>
+        <div class="grid-3"><div><input id="q-cli" placeholder="Client Name"><input id="q-addr" placeholder="Address"></div><div><input id="q-subj" placeholder="Subject"></div><div><input id="q-date" type="date"></div></div>
+        <div><textarea id="q-note" style="height:80px; resize:none;" placeholder="Terms / Notes"></textarea></div>
+        <div class="glass mt-2 mb-2" style="padding:15px; border:1px dashed var(--neon-blue);">
+            <input id="q-item-search" placeholder="Add Product..." onkeyup="AV.Tools.renderISearch(this.value)">
+            <div id="q-item-results" class="grid-3" style="max-height:150px; overflow-y:auto; margin-top:5px;"></div>
+        </div>
+        <div class="table-wrap"><table id="t-quote"><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th><th></th></tr></thead><tbody></tbody></table></div>
+        <div class="flex between mt-2"><div></div><div style="color:var(--neon-blue); font-size:24px; font-weight:700;">Total: <span id="q-tot">0</span></div></div>
+        <div class="flex mt-2"><button class="btn btn-pri" onclick="AV.Tools.printQ()">Generate PDF</button><button class="btn btn-sec" onclick="AV.UI.closeM('m-q')">Close</button></div>
+    </div></div>
+
+    <div id="m-add-item" class="modal-mask"><div class="modal">
+        <h3 id="ni-title">Mint Stock</h3>
+        <div id="ni-stats" class="hidden" style="margin-bottom:15px; padding:10px; background:rgba(255,255,255,0.05); border-radius:8px; display:flex; justify-content:space-between; font-size:12px;"></div>
+        <input id="ni-n" placeholder="Item Name"><select id="ni-t"><option value="BATCH">Batch (Quantity only)</option><option value="SERIAL">Serialized (Unique ID)</option></select>
+        <div class="grid-2"><input id="ni-c" type="number" placeholder="Cost Price"><input id="ni-p" type="number" placeholder="Selling Price"></div>
+        <div style="background:rgba(59, 130, 246, 0.1); padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid rgba(59, 130, 246, 0.3);">
+            <label id="ni-q-lbl" style="color:#fff">Current Warehouse Quantity</label><input id="ni-q" type="number" value="1" placeholder="Qty">
+            <div class="text-sm" style="color:var(--neon-cyan)">* Set this to total available stock IN WAREHOUSE. Do not count sold items.</div>
+        </div>
+        <div class="flex"><input id="ni-sku" placeholder="SKU (Auto if empty)"><input id="ni-loc" placeholder="Shelf Location"></div>
+        <button id="ni-btn" class="btn btn-pri full-w mt-2" onclick="AV.Inv.add()">Save Changes</button><button class="btn btn-sec full-w mt-2" onclick="AV.UI.closeM('m-add-item')">Cancel</button>
+    </div></div>
+
+    <div id="m-add-dist" class="modal-mask"><div class="modal"><h3 id="nd-title">Add Agent</h3><input id="nd-n" placeholder="Name" onkeypress="if(event.key==='Enter') document.getElementById('nd-p').focus()"><input id="nd-p" placeholder="Phone" onkeypress="if(event.key==='Enter') document.getElementById('nd-c').focus()"><input id="nd-c" type="number" placeholder="Comm %" value="10" onkeypress="if(event.key==='Enter') AV.Dist.add()"><button id="nd-btn" class="btn btn-pri full-w mt-2" onclick="AV.Dist.add()">Save</button><button class="btn btn-sec full-w mt-2" onclick="AV.UI.closeM('m-add-dist')">Cancel</button></div></div>
+    
+    <div id="print-zone"></div>
+
+    <script>
+        const $ = i => document.getElementById(i), $$ = s => document.querySelectorAll(s);
+        const SimpleDB = {
+            open: () => new Promise((res, rej) => { const r = indexedDB.open('AV_DB', 1); r.onupgradeneeded = e => e.target.result.createObjectStore('Store'); r.onsuccess = e => res(e.target.result); r.onerror = rej; }),
+            op: (mode, fn) => SimpleDB.open().then(db => new Promise((res, rej) => { const r = fn(db.transaction('Store', mode).objectStore('Store')); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); })),
+            set: (k, v) => SimpleDB.op('readwrite', s => s.put(v, k)), get: k => SimpleDB.op('readonly', s => s.get(k)), clear: () => SimpleDB.op('readwrite', s => s.clear())
+        };
+
+        const AV = {
+            state: { 
+                inv:[], units:[], dist:[], distStock:{}, sales:[], ledger:[], logs:[], transfers:[], payouts:[], sups:[], sellers:[], expenses:[],
+                passwords: { inv:'admin', sale:'admin', ret:'admin', fin:'admin', reset:'admin' }
+            },
+            cache: { unitCounts: {} }, cart: [], quoteItems: [], temp: { unlocked: {} },
+
+            Auth: {
+                init: async () => {
+                    const s = localStorage.getItem('AV_SESS');
+                    if (s && Date.now() < parseInt(s)) { $('login-screen').classList.add('hidden'); $('app').style.display='flex'; await AV.Sys.init(); AV.Auth.tick(); }
+                    else { $('login-screen').classList.remove('hidden'); $('app').style.display='none'; }
+                    setInterval(() => { if(localStorage.getItem('AV_SESS') && Date.now() > parseInt(localStorage.getItem('AV_SESS'))) AV.Auth.logout(); }, 60000);
+                    ['mousemove','keydown'].forEach(e => document.addEventListener(e, AV.Auth.tick));
+                },
+                login: async () => {
+                    if($('l-u').value==='admin' && $('l-p').value==='admin') {
+                        $('login-form').classList.add('hidden'); $('db-load-status').classList.remove('hidden');
+                        await AV.Sys.init(); $('login-screen').classList.add('hidden'); $('app').style.display='flex'; AV.Auth.tick();
+                    } else $('l-msg').innerText='ACCESS DENIED';
+                },
+                logout: () => { localStorage.removeItem('AV_SESS'); location.reload(); },
+                tick: () => { if($('app').style.display==='flex') localStorage.setItem('AV_SESS', Date.now() + 900000); },
+                
+                challenge: (section, successCb) => {
+                    AV.temp.pendingAuth = { section, successCb };
+                    $('auth-in').value = '';
+                    AV.UI.modal('m-auth');
+                    setTimeout(()=>$('auth-in').focus(), 100);
+                },
+                verify: () => {
+                    const inp = $('auth-in').value;
+                    const { section, successCb } = AV.temp.pendingAuth;
+                    
+                    if (section === 'PASS_MAN') {
+                        if (inp === 'Anritvox2025') {
+                            AV.UI.closeM('m-auth');
+                            successCb();
+                        } else alert('Invalid Master Key');
+                        return;
+                    }
+
+                    if (inp === AV.state.passwords[section]) {
+                        AV.temp.unlocked[section] = true;
+                        AV.UI.closeM('m-auth');
+                        successCb();
+                    } else {
+                        alert('Access Denied');
+                    }
+                }
+            },
+
+            Util: {
+                debounce: (fn, w) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), w); }; },
+                debouncedInvRender: null, debSaleSug: null, debQuoteSug: null,
+                fmtDate: (d) => new Date(d).toLocaleDateString(),
+                fmtTime: (d) => new Date(d).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            },
+
+            Sys: {
+                init: async () => {
+                    try { 
+                        const d = await SimpleDB.get('ROOT'); 
+                        if(d) {
+                             AV.state = { ...AV.state, ...d }; 
+                             if(!AV.state.passwords) AV.state.passwords = { inv:'admin', sale:'admin', ret:'admin', fin:'admin', reset:'admin' };
+                        }
+                        AV.Sys.buildCache(); 
+                    } catch(e) { console.error(e); }
+                    $('sys-date').innerText = new Date().toDateString(); $('q-date').valueAsDate = new Date();
+                    AV.Util.debouncedInvRender = AV.Util.debounce(AV.Inv.render, 300);
+                    AV.Util.debSaleSug = AV.Util.debounce(AV.Sale.suggest, 300);
+                    AV.Util.debQuoteSug = AV.Util.debounce(AV.Tools.sugClient, 300);
+                    AV.Sys.refresh();
+                },
+                buildCache: () => { AV.cache.unitCounts = {}; AV.state.units.forEach(u => { if(u.loc==='WH') AV.cache.unitCounts[u.itemId] = (AV.cache.unitCounts[u.itemId]||0)+1; }); },
+                save: async () => { ('requestIdleCallback' in window) ? requestIdleCallback(() => SimpleDB.set('ROOT', AV.state)) : await SimpleDB.set('ROOT', AV.state); },
+                
+                log: async m => { 
+                    AV.state.logs.unshift({ts:new Date().toLocaleString(), m}); 
+                    if(AV.state.logs.length>300) AV.state.logs.pop(); 
+                    AV.UI.notify(m); 
+                    await AV.Sys.save(); AV.Sys.refresh(); 
+                },
+                bkp: () => { 
+                    const dataStr = JSON.stringify(AV.state);
+                    const encrypted = btoa(unescape(encodeURIComponent(dataStr)));
+                    const backupObj = { v: 1, ts: new Date().toISOString(), data: encrypted };
+                    const a = document.createElement('a'); 
+                    a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backupObj)); 
+                    a.download = 'av_backup_' + Date.now() + '.json'; 
+                    a.click(); 
+                    AV.UI.notify('✅ Encrypted backup downloaded');
+                },
+                rst: (fileInput) => { 
+                    const password = document.getElementById('restore-pass').value;
+                    const expectedPassword = 'Anritvox2025';
+                    if(!password) { alert('❌ Enter backup password'); return; }
+                    if(password !== expectedPassword) { alert('❌ Wrong password'); return; }
+                    if(!fileInput.files || !fileInput.files[0]) { alert('⚠️ Select backup file'); return; }
+                    const reader = new FileReader(); 
+                    reader.onload = async (e) => { 
+                        try {
+                            const backupObj = JSON.parse(e.target.result);
+                            const decrypted = decodeURIComponent(escape(atob(backupObj.data)));
+                            AV.state = JSON.parse(decrypted); 
+                            await AV.Sys.save(); AV.Sys.refresh(); 
+                            document.getElementById('restore-pass').value = '';
+                            document.getElementById('backup-file').value = '';
+                            AV.UI.notify('✅ Restored successfully');
+                        } catch(err) { alert('❌ Invalid backup file'); }
+                    }; 
+                    reader.readAsText(fileInput.files[0]); 
+                },
+                nuke: () => { 
+                    AV.Auth.challenge('reset', async () => {
+                        if(confirm('FACTORY RESET: ALL DATA WILL BE LOST. PROCEED?')) { await SimpleDB.clear(); location.reload(); }
+                    });
+                },
+                auditFilter: () => AV.Sys.refresh(),
+                
+                refresh: () => {
+                    const rev = AV.state.sales.reduce((a,b)=>a+(b.total||0),0), prof = AV.state.ledger.reduce((a,b)=>a+(b.cr||0)-(b.dr||0),0);
+                    const stock = AV.state.inv.filter(i=>!i.archived).reduce((a,i)=> a + ((i.type==='BATCH'?i.wh:AV.state.units.filter(u=>u.itemId===i.id && u.loc==='WH').length)*(i.cost||0)), 0);
+                    
+                    $('d-rev').innerText='₹'+rev.toLocaleString(); $('d-prof').innerText='₹'+prof.toLocaleString(); $('d-val').innerText='₹'+stock.toLocaleString();
+                    $('d-due').innerText='₹'+AV.state.dist.reduce((a,b)=>a+(b.wallet||0),0).toLocaleString();
+
+                    $('war-room').innerHTML = AV.state.inv.filter(i=>!i.archived).map(i => {
+                        const q = i.type==='BATCH' ? i.wh : (AV.cache.unitCounts[i.id]||0);
+                        return q<10 ? `<div style="border-bottom:1px solid rgba(255,255,255,0.05); padding:8px; display:flex; justify-content:space-between;"><span>${i.name}</span> <span class="tag t-bad">${q} left</span></div>` : '';
+                    }).join('');
+                    
+                    $('dash-log').innerHTML = AV.state.logs.slice(0,10).map(l => `<div style="padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.03);"><span style="color:var(--neon-blue); font-size:11px; margin-right:8px;">${l.ts.split(',')[1]}</span> ${l.m}</div>`).join('');
+                    
+                    AV.Inv.render(); AV.Dist.render(); AV.Inv.renderUnits();
+                    
+                    const aq = ($('aud-fil').value||'').toLowerCase();
+                    const alogs = aq ? AV.state.logs.filter(l=>l.m.toLowerCase().includes(aq)) : AV.state.logs;
+                    $('full-log').innerHTML = alogs.map(l=>`<div><span style="color:var(--neon-blue)">${l.ts}</span>: ${l.m}</div>`).join('');
+
+                    $('t-sl').querySelector('tbody').innerHTML = AV.state.sales.slice(0,50).map(s=>`<tr><td class="mono">${s.id}</td><td>${s.date}</td><td>${s.cust}</td><td>${s.items}</td><td style="color:var(--neon-green); text-align:right">₹${s.total}</td></tr>`).join('');
+                    $('t-led').querySelector('tbody').innerHTML = AV.state.ledger.slice().reverse().slice(0,50).map(l=>`<tr><td>${l.date}</td><td><span class="tag">${l.type}</span></td><td>${l.desc}</td><td style="color:var(--neon-pink)">${l.dr?'-'+l.dr:''}</td><td style="color:var(--neon-green)">${l.cr?'+'+l.cr:''}</td></tr>`).join('');
+                    $('ex-l').innerHTML = AV.state.expenses.map(e=>`<li>${e.d}: ₹${e.a}</li>`).join('');
+                    $('t-tf').querySelector('tbody').innerHTML = AV.state.transfers.slice().reverse().map(t=>`<tr><td>${t.ts || t.date}</td><td>${t.to}</td><td>${t.item}</td><td>${t.qty}</td></tr>`).join('');
+                    $('t-sellers').querySelector('tbody').innerHTML = AV.state.sellers.map(s=>`<tr><td><span class="tag t-pri">${s.uid}</span></td><td>${s.name}</td><td>${s.distName}</td></tr>`).join('');
+                    $('t-payouts').querySelector('tbody').innerHTML = AV.state.payouts.slice().reverse().map(p => `<tr><td>${p.date}</td><td>${p.agent}</td><td style="color:var(--neon-pink)">-₹${p.amount}</td></tr>`).join('');
+
+                    const ctx = $('salesChart');
+                    if(ctx) {
+                        if(window.myChart) window.myChart.destroy();
+                        window.myChart = new Chart(ctx, { type:'bar', data:{labels:['Rev','Net','Exp'], datasets:[{data:[rev, prof, AV.state.expenses.reduce((a,b)=>a+b.a,0)], backgroundColor:['#3b82f6','#10b981','#ec4899']}]}, options:{plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, grid:{color:'#222'}}, x:{grid:{display:false}}}}});
+                    }
+                }
+            },
+
+            UI: {
+                nav: v => {
+                    const protectedViews = ['inv', 'sale', 'ret', 'fin'];
+                    if (protectedViews.includes(v) && !AV.temp.unlocked[v]) {
+                        AV.Auth.challenge(v, () => AV.UI.proceedNav(v));
+                        return;
+                    }
+                    AV.UI.proceedNav(v);
+                },
+                proceedNav: (v) => {
+                    $$('.view').forEach(e=>e.classList.remove('active')); $$('.nav-item').forEach(e=>e.classList.remove('active'));
+                    $('v-'+v).classList.add('active'); $$(`.nav-item[onclick*="${v}"]`).forEach(n=>n.classList.add('active'));
+                    if(AV.Pop[v]) AV.Pop[v]();
+                },
+                sub: (p, c, b) => { $$(`#v-${p} .sub-view`).forEach(e=>e.classList.remove('active')); $(`${p}-${c}`).classList.add('active'); $$(`#v-${p} .tab-btn`).forEach(x=>x.classList.remove('active')); b.classList.add('active'); },
+                modal: m => $(m).style.display='flex', closeM: m => $(m).style.display='none',
+                invModalNew: () => { 
+                    AV.temp.eId=null; 
+                    $('ni-title').innerText="Mint Stock"; $('ni-btn').innerText="Mint"; 
+                    ['ni-n','ni-c','ni-p','ni-sku','ni-loc'].forEach(i=>$(i).value=''); 
+                    $('ni-q').value=1; $('ni-sku').disabled=false; 
+                    $('ni-stats').classList.add('hidden');
+                    $('ni-q-lbl').innerText = "Initial Warehouse Quantity";
+                    AV.UI.modal('m-add-item'); 
+                },
+                notify: m => { const n=document.createElement('div'); n.className='toast'; n.innerHTML=`<i class="ph-bold ph-bell"></i> ${m}`; $('toast-feed').prepend(n); setTimeout(()=>n.remove(),3000); }
+            },
+
+            Pop: {
+                trans:()=> { $('tf-d').innerHTML=AV.state.dist.map(x=>`<option value="${x.id}">${x.name}</option>`).join(''); $('tf-i').innerHTML=AV.state.inv.filter(i=>!i.archived).map(x=>`<option value="${x.id}">${x.name}</option>`).join(''); AV.Trans.upd(); },
+                sale:()=> { $('sl-d').innerHTML=AV.state.dist.map(x=>`<option value="${x.id}">${x.name}</option>`).join(''); AV.Sale.upd(); },
+                ret:()=> { $('rt-d').innerHTML=AV.state.dist.map(x=>`<option value="${x.id}">${x.name}</option>`).join(''); AV.Ret.upd(); },
+                fin:()=> { $('fp-d').innerHTML=AV.state.dist.map(x=>`<option value="${x.id}">${x.name}</option>`).join(''); AV.Fin.upd(); },
+                sup:()=> { $('n-sell-dist').innerHTML=AV.state.dist.map(x=>`<option value="${x.id}">${x.name}</option>`).join(''); }
+            },
+
+            Inv: {
+                add: async () => {
+                    const sku=$('ni-sku').value, id=sku&&sku.trim()!==''?sku:'SKU-'+Date.now(), name=$('ni-n').value, type=$('ni-t').value;
+                    const c=parseFloat($('ni-c').value), p=parseFloat($('ni-p').value), q=parseInt($('ni-q').value)||0;
+                    if(!name) return alert("Name Required");
+                    const ex = AV.state.inv.find(i=>i.id===id);
+                    if(ex) {
+                        ex.name=name; ex.loc=$('ni-loc').value||'-'; ex.cost=c; ex.price=p;
+                        if(type==='SERIAL') {
+                            const currentWHCount = AV.state.units.filter(u=>u.itemId===id && u.loc==='WH').length;
+                            const diff = q - currentWHCount;
+                            
+                            if (diff > 0) {
+                                for(let k=0; k<diff; k++) AV.state.units.push({uid:`SN-${Date.now()}-${k}`, itemId:id, loc:'WH', status:'OK', warrantyEnd:'-', created: new Date().toISOString()});
+                                AV.Sys.log(`Added ${diff} new serial units to WH. Total WH: ${q}`);
+                            } else if (diff < 0) {
+                                const removeCount = Math.abs(diff); const whUnits = AV.state.units.filter(u=>u.itemId===id && u.loc==='WH');
+                                if (whUnits.length >= removeCount) {
+                                    const toRemove = whUnits.slice(0, removeCount).map(u=>u.uid); AV.state.units = AV.state.units.filter(u => !toRemove.includes(u.uid));
+                                    AV.Sys.log(`Removed ${removeCount} units from WH.`);
+                                } else return alert(`Cannot reduce to ${q}. You only have ${whUnits.length} in Warehouse.`);
+                            }
+                        } else ex.wh = q;
+                    } else {
+                        AV.state.inv.push({id, name, type, loc:$('ni-loc').value||'-', cost:c||0, price:p||0, wh:q});
+                        if(type==='SERIAL') for(let k=0;k<q;k++) AV.state.units.push({uid:`SN-${Date.now()}-${k}`, itemId:id, loc:'WH', status:'OK', warrantyEnd:'-', created: new Date().toISOString()});
+                        AV.Sys.log(`Minted Item: ${name}`);
+                    }
+                    AV.Sys.buildCache(); AV.Inv.render(); AV.UI.closeM('m-add-item'); await AV.Sys.save();
+                },
+                edit: id => {
+                    const i=AV.state.inv.find(x=>x.id===id); if(!i)return; AV.temp.eId=id;
+                    $('ni-title').innerText="Edit Inventory"; $('ni-btn').innerText="Update Stock"; $('ni-n').value=i.name; $('ni-c').value=i.cost; $('ni-p').value=i.price;
+                    
+                    const totalSys = AV.state.units.filter(u=>u.itemId===id).length;
+                    const whSys = AV.state.units.filter(u=>u.itemId===id && u.loc==='WH').length;
+                    const soldSys = AV.state.units.filter(u=>u.itemId===id && u.loc==='SOLD').length;
+                    const distSys = AV.state.units.filter(u=>u.itemId===id && u.loc!=='WH' && u.loc!=='SOLD').length;
+                    
+                    if(i.type === 'SERIAL') {
+                        $('ni-stats').innerHTML = `<span style="color:var(--neon-blue)">WH: ${whSys}</span> <span style="color:var(--neon-green)">Sold: ${soldSys}</span> <span style="color:var(--neon-purple)">Dist: ${distSys}</span>`;
+                        $('ni-stats').classList.remove('hidden');
+                        $('ni-q').value = whSys; 
+                        $('ni-q-lbl').innerText = "Update Warehouse Quantity (Add/Remove)";
+                    } else {
+                        $('ni-q').value = i.wh;
+                        $('ni-stats').classList.add('hidden');
+                    }
+                    
+                    $('ni-loc').value=i.loc||''; $('ni-sku').value=i.id; $('ni-sku').disabled=true; AV.UI.modal('m-add-item');
+                },
+                del: async id => { 
+                    const i = AV.state.inv.find(x=>x.id===id);
+                    if(!i) return;
+                    const soldOrDist = AV.state.units.filter(u=>u.itemId===id && u.loc!=='WH').length;
+                    if (soldOrDist > 0) {
+                        if(confirm(`Cannot delete "${i.name}": ${soldOrDist} units are currently Sold/Distributed.\n\nArchive instead?`)) {
+                            i.archived = true;
+                            AV.state.units = AV.state.units.filter(u => !(u.itemId === id && u.loc === 'WH'));
+                            i.wh = 0;
+                            AV.Sys.log(`Archived Item: ${id}`);
+                        } else return;
+                    } else {
+                        if(confirm("Delete Item and ALL stock? This cannot be undone.")) {
+                            AV.state.inv=AV.state.inv.filter(k=>k.id!==id); 
+                            AV.state.units=AV.state.units.filter(u=>u.itemId!==id); 
+                            AV.Sys.log(`Deleted Item: ${id}`); 
+                        }
+                    }
+                    AV.Sys.buildCache(); AV.Inv.render(); await AV.Sys.save(); 
+                },
+                render: () => {
+                    const q=($('inv-s').value||'').toLowerCase(), tb=$('t-inv').querySelector('tbody');
+                    const flt=AV.state.inv.filter(d=>d && !d.archived && ((d.name||'').toLowerCase().includes(q)||(d.id||'').toLowerCase().includes(q)));
+                    tb.innerHTML = flt.slice(0,100).map(d => {
+                        const w = d.type==='BATCH' ? d.wh : (AV.cache.unitCounts[d.id]||0), sId = String(d.id).replace(/'/g,"\\'");
+                        return `<tr><td><span class="tag t-pri">${d.id}</span></td><td class="bold">${d.name}</td><td><span class="tag">${d.type}</span></td><td style="color:${w<5?'var(--neon-pink)':'#fff'}">${w}</td><td>${d.loc||'-'}</td><td>${d.cost}</td><td>${d.price}</td><td style="text-align:right"><button class="btn btn-sec btn-sm" onclick="AV.Inv.edit('${sId}')"><i class="ph-bold ph-pencil"></i></button> <button class="btn btn-dan btn-sm" onclick="AV.Inv.del('${sId}')"><i class="ph-bold ph-trash"></i></button></td></tr>`;
+                    }).join('');
+                    if(flt.length>100) tb.innerHTML+=`<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--text-mute)">Showing 100 of ${flt.length} results</td></tr>`;
+                    AV.Inv.renderUnits();
+                },
+                renderUnits: () => {
+                    const q = ($('inv-ser-s').value||'').toLowerCase(), filterLoc = $('inv-ser-f').value;
+                    const units = AV.state.units.filter(u => {
+                        const matchText = u.uid.toLowerCase().includes(q) || (AV.state.inv.find(i=>i.id===u.itemId)||{}).name.toLowerCase().includes(q);
+                        const matchLoc = filterLoc === 'ALL' ? true : (filterLoc === 'WH' ? u.loc === 'WH' : filterLoc === 'SOLD' ? u.loc === 'SOLD' : (u.loc !== 'WH' && u.loc !== 'SOLD'));
+                        return matchText && matchLoc;
+                    });
+                    $('t-units').querySelector('tbody').innerHTML = units.slice(0,100).map(u => {
+                        const days = u.created ? Math.floor((new Date() - new Date(u.created)) / (1000 * 60 * 60 * 24)) : '-';
+                        return `<tr><td class="mono">${u.uid}</td><td>${(AV.state.inv.find(i=>i.id===u.itemId)||{}).name||'?'}</td><td><span class="tag ${u.loc === 'WH' ? 't-info' : (u.loc === 'SOLD' ? 't-ok' : 't-pri')}">${u.loc}</span></td><td>${u.status}</td><td style="${u.warrantyEnd!=='-' && new Date(u.warrantyEnd)<new Date()?'color:red':''}\">${u.warrantyEnd}</td><td>${days} days</td></tr>`;
+                    }).join('');
+                }
+            },
+
+            Dist: {
+                add: async () => {
+                    const n=$('nd-n').value, p=$('nd-p').value, c=parseFloat($('nd-c').value);
+                    if(AV.temp.eDistId) { const d=AV.state.dist.find(x=>x.id===AV.temp.eDistId); if(d){ d.name=n; d.phone=p; d.comm=c; AV.temp.eDistId=null; } }
+                    else AV.state.dist.push({id:'D-'+Date.now(), name:n, phone:p, comm:c, wallet:0});
+                    AV.Dist.render(); AV.UI.closeM('m-add-dist'); await AV.Sys.save();
+                },
+                render: () => {
+                    $('dist-grid').innerHTML = AV.state.dist.map(d => `<div class="glass" style="border-left:4px solid var(--neon-purple); position:relative; padding-top:40px;"><i class="ph-bold ph-pencil-simple" style="position:absolute; top:15px; right:15px; cursor:pointer; color:var(--text-mute)" onclick="AV.temp.eDistId='${d.id}';$('nd-n').value='${d.name}';$('nd-p').value='${d.phone}';$('nd-c').value='${d.comm}';AV.UI.modal('m-add-dist')"></i><h3 style="margin-bottom:5px;">${d.name}</h3><div class="text-sm">ID: ${d.id}</div><div class="flex between mt-2" style="background:rgba(255,255,255,0.05); padding:10px; border-radius:6px;"><div>Wallet</div><div class="bold">₹${d.wallet.toFixed(2)}</div></div><button class="btn btn-sec btn-sm full-w mt-2" onclick="AV.Dist.det('${d.id}')">View Details</button></div>`).join('');
+                },
+                det: id => {
+                    const d=AV.state.dist.find(x=>x.id===id); if(!d)return; $('dd-name').innerText=d.name; $('dd-id').innerText=id; AV.UI.modal('m-dist-details');
+                    let h=''; AV.state.inv.forEach(i=>{ if(i.type==='BATCH'){ const q=AV.state.distStock[`${id}_${i.id}`]||0; if(q>0)h+=`<tr><td>${i.name}</td><td>BATCH</td><td>${q}</td></tr>`; }});
+                    AV.state.units.filter(u=>u.loc===id).forEach(u=>h+=`<tr><td>${(AV.state.inv.find(x=>x.id===u.itemId)||{}).name}</td><td>SERIAL</td><td>${u.uid}</td></tr>`);
+                    $('t-dd-stock').querySelector('tbody').innerHTML=h||'<tr><td colspan="3" style="text-align:center; padding:20px;">No Stock Currently Held</td></tr>';
+                    $('dd-sales').innerHTML = `<div class="table-wrap"><table id="t-dd-sales"><thead><tr><th>Txn</th><th>Items</th><th>Total</th></tr></thead><tbody>${AV.state.sales.filter(s=>s.dist===d.name).map(s=>`<tr><td>${s.id}</td><td>${s.items}</td><td>${s.total}</td></tr>`).join('')}</tbody></table></div>`;
+                }
+            },
+
+            Sup: { add: async()=>{ AV.state.sups.push({name:$('ns-n').value}); await AV.Sys.save(); AV.UI.closeM('m-sup'); AV.Sys.refresh(); } },
+            Sellers: { add: async()=>{ const n=$('n-sell-name').value, dId=$('n-sell-dist').value; if(!n||!dId)return; AV.state.sellers.push({uid:Math.floor(1e4+Math.random()*9e4)+'', name:n, addr:$('n-sell-addr').value, distId:dId, distName:AV.state.dist.find(d=>d.id===dId).name}); await AV.Sys.save(); AV.Sys.refresh(); $('n-sell-name').value=''; } },
+            
+            Trans: {
+                upd: () => { const i=AV.state.inv.find(x=>x.id===$('tf-i').value); if(i) $('tf-av').innerText=i.type==='BATCH'?i.wh:(AV.cache.unitCounts[i.id]||0); },
+                exec: async () => {
+                    const dId=$('tf-d').value, iId=$('tf-i').value, q=parseInt($('tf-q').value); const i=AV.state.inv.find(x=>x.id===iId);
+                    if(i.type==='BATCH'){ if(i.wh<q)return alert('Insufficient Stock'); i.wh-=q; AV.state.distStock[`${dId}_${iId}`]=(AV.state.distStock[`${dId}_${iId}`]||0)+q; }
+                    else { const u=AV.state.units.filter(x=>x.itemId===iId&&x.loc==='WH'); if(u.length<q)return alert('Insufficient Stock'); u.slice(0,q).forEach(x=>x.loc=dId); }
+                    AV.state.transfers.push({date: new Date().toLocaleDateString(), ts: new Date().toLocaleString(), to: AV.state.dist.find(x=>x.id===dId).name, item: i.name, qty: q}); 
+                    AV.Sys.log(`Dispatched ${q} ${i.name} to ${AV.state.dist.find(x=>x.id===dId).name}`);
+                    AV.Sys.buildCache(); await AV.Sys.save(); AV.Sys.refresh(); AV.Trans.upd();
+                }
+            },
+
+            Sale: {
+                upd: () => { const dId=$('sl-d').value; $('sl-i').innerHTML='<option>Select Product</option>'+AV.state.inv.filter(i=>!i.archived).map(i=> { let q=i.type==='BATCH'?AV.state.distStock[`${dId}_${i.id}`]||0:AV.state.units.filter(u=>u.itemId===i.id&&u.loc===dId).length; return q>0?`<option value="${i.id}">${i.name} (Stock: ${q})</option>`:''; }).join(''); AV.cart=[]; AV.Sale.rCart(); },
+                suggest: v => { const b=$('sl-sug'); if(v.length<1){b.classList.add('hidden');return;} const m=AV.state.sellers.filter(s=>s.name.toLowerCase().includes(v.toLowerCase())); b.innerHTML=m.map(x=>`<div class="sug-item" onclick="$('sl-c').value='${x.name}';$('sl-uid').value='${x.uid}';$('sl-sug').classList.add('hidden')">${x.name} <span>${x.uid}</span></div>`).join(''); b.classList.remove('hidden'); },
+                addCart: () => {
+                    const dId=$('sl-d').value, iId=$('sl-i').value, q=parseInt($('sl-q').value), w=$('sl-w').value; if(!iId||iId==='Select Product')return;
+                    const avail = AV.state.inv.find(x=>x.id===iId).type==='BATCH'?AV.state.distStock[`${dId}_${iId}`]||0 : AV.state.units.filter(u=>u.itemId===iId&&u.loc===dId).length;
+                    const inC = AV.cart.find(c=>c.id===iId); if((inC?inC.qty:0)+q > avail) return alert('Insufficient Stock for this Item');
+                    const i=AV.state.inv.find(x=>x.id===iId);
+                    if(inC && inC.w===w) inC.qty+=q; else AV.cart.push({id:i.id, name:i.name, price:i.price, qty:q, type:i.type, w}); AV.Sale.rCart();
+                },
+                rCart: () => { $('t-cart').querySelector('tbody').innerHTML=AV.cart.map((c,i)=>`<tr><td>${c.name}</td><td>${c.w=='0.5'?'6mo':c.w+'yr'}</td><td>${c.qty}</td><td>${c.qty*c.price}</td><td><button class="btn btn-dan btn-sm" onclick="AV.cart.splice(${i},1);AV.Sale.rCart()">x</button></td></tr>`).join(''); $('sl-tot').innerText='₹'+AV.cart.reduce((a,b)=>a+b.qty*b.price,0); },
+                checkout: async () => {
+                    if(!AV.cart.length)return; const dId=$('sl-d').value, d=AV.state.dist.find(x=>x.id===dId), txn='INV-'+Date.now();
+                    let tot=0, sns=[];
+                    AV.cart.forEach(c => {
+                        tot+=c.qty*c.price;
+                        if(c.type==='BATCH') AV.state.distStock[`${dId}_${c.id}`]-=c.qty;
+                        else {
+                            const u = AV.state.units.filter(x=>x.itemId===c.id&&x.loc===dId).slice(0,c.qty);
+                            const end = new Date(); if(c.w==0.5) end.setMonth(end.getMonth()+6); else end.setFullYear(end.getFullYear()+parseInt(c.w));
+                            u.forEach(x => { x.loc='SOLD'; x.warrantyEnd=end.toISOString().split('T')[0]; x.txnId=txn; x.soldDate=new Date().toLocaleDateString(); sns.push(x.uid); });
+                        }
+                    });
+                    d.wallet+=tot*(d.comm/100); AV.state.sales.push({id:txn, date:new Date().toLocaleDateString(), dist:d.name, cust:$('sl-c').value||'Walk-in', total:tot, items:AV.cart.map(i=>i.name).join(','), serials:sns});
+                    AV.state.ledger.push({date:new Date().toLocaleDateString(), type:'SALE', desc:$('sl-c').value, cr:tot});
+                    AV.Sys.log(`Sale ${txn} complete for ₹${tot}`);
+                    await AV.Sys.save(); AV.Sys.refresh();
+                    $('receipt-content').innerHTML = `TXN: ${txn}<br>Date: ${new Date().toLocaleString()}<br><hr>${AV.cart.map(i=>`${i.name} x${i.qty} - ${i.qty*i.price}`).join('<br>')}<br>SNs: ${sns.join(', ')}<hr><b>TOTAL: ₹${tot}</b>`;
+                    AV.UI.modal('m-sale-receipt'); AV.cart=[]; AV.Sale.rCart();
+                }
+            },
+
+            Ret: {
+                upd: () => { const d=$('rt-d').value; $('rt-i').innerHTML=AV.state.inv.filter(i=>!i.archived).map(i=>{ let q=i.type==='BATCH'?AV.state.distStock[`${d}_${i.id}`]:AV.state.units.filter(u=>u.itemId===i.id&&u.loc===d).length; return q>0?`<option value="${i.id}">${i.name}</option>`:''; }).join(''); },
+                exec: async () => {
+                    const d=$('rt-d').value, iId=$('rt-i').value, q=parseInt($('rt-q').value), i=AV.state.inv.find(x=>x.id===iId);
+                    if(i.type==='BATCH') { if((AV.state.distStock[`${d}_${iId}`]||0)<q)return; AV.state.distStock[`${d}_${iId}`]-=q; i.wh+=q; }
+                    else { const u=AV.state.units.filter(x=>x.itemId===iId&&x.loc===d); if(u.length<q)return; u.slice(0,q).forEach(x=>x.loc='WH'); }
+                    AV.Sys.log(`Return processed: ${q} ${i.name} from ${d}`);
+                    AV.Sys.buildCache(); await AV.Sys.save(); AV.Sys.refresh(); AV.UI.notify("Return Processed");
+                }
+            },
+
+            Fin: {
+                upd: () => $('fp-v').innerText='₹'+(AV.state.dist.find(x=>x.id===$('fp-d').value)||{}).wallet?.toFixed(2)||0,
+                pay: async () => { const d=AV.state.dist.find(x=>x.id===$('fp-d').value), a=parseFloat($('fp-a').value); if(d&&a){d.wallet-=a; AV.state.ledger.push({date:new Date().toLocaleDateString(),type:'PAYOUT',desc:d.name,dr:a}); AV.state.payouts.push({date:new Date().toLocaleString(),agent:d.name,amount:a}); await AV.Sys.save(); AV.Sys.refresh();} },
+                exp: async () => { AV.state.expenses.push({d:$('ex-d').value, a:parseFloat($('ex-a').value)}); await AV.Sys.save(); AV.Sys.refresh(); }
+            },
+
+            Tools: {
+                checkW: () => { const u=AV.state.units.find(x=>x.uid===$('w-check-s').value); $('w-result').innerHTML=u ? (u.warrantyEnd==='-' ? '<span style="color:var(--neon-blue)">In Stock</span>' : (new Date()>new Date(u.warrantyEnd) ? '<span style="color:var(--neon-pink)">Expired</span>' : `<span style="color:var(--neon-green)">Active until ${u.warrantyEnd}</span>`)) : '<span style="color:var(--neon-pink)">Invalid Serial</span>'; },
+                openQ: () => { AV.quoteItems=[]; AV.Tools.rQ(); AV.Tools.renderISearch(''); AV.UI.modal('m-q'); },
+                openWP: () => { $('wp-preview').innerHTML=''; $('wp-txn').value=''; AV.UI.modal('m-w-print'); },
+                
+                openPassMan: () => AV.Auth.challenge('PASS_MAN', () => {
+                    const p = AV.state.passwords;
+                    $('pm-inv').value = p.inv; $('pm-sale').value = p.sale; $('pm-ret').value = p.ret; $('pm-fin').value = p.fin; $('pm-reset').value = p.reset;
+                    AV.UI.modal('m-pass-man');
+                }),
+                savePass: async () => {
+                    AV.state.passwords = { inv: $('pm-inv').value, sale: $('pm-sale').value, ret: $('pm-ret').value, fin: $('pm-fin').value, reset: $('pm-reset').value };
+                    await AV.Sys.save();
+                    AV.UI.notify("Security Keys Updated");
+                    AV.UI.closeM('m-pass-man');
+                },
+
+                searchW: t => {
+                    const s = AV.state.sales.find(x=>x.id===t); if(!s) return alert('TXN Not Found');
+                    $('wp-preview').innerHTML = (s.serials||[]).map((sn,i) => {
+                        const u=AV.state.units.find(x=>x.uid===sn), item=u?AV.state.inv.find(inv=>inv.id===u.itemId):{name:'?'};
+                        setTimeout(()=>new QRCode($(`qr-${i}`),{text:`SN:${sn}|IT:${item.name}|W:${u.warrantyEnd}`,width:60,height:60}),50);
+                        return `<div class="w-sticker" style="margin-bottom:5px;"><div id="qr-${i}" style="width:60px;margin-right:10px;"></div><div><b>${sn}</b><br>${item.name}<br>Exp: ${u.warrantyEnd}</div></div>`;
+                    }).join('');
+                },
+                printStickers: () => { $('print-zone').innerHTML = `<div class="w-print-grid">${$('wp-preview').innerHTML}</div>`; setTimeout(()=>window.print(),500); },
+                sugClient: v => { const b=$('q-sug'), m=AV.state.sellers.filter(s=>s.name.toLowerCase().includes(v.toLowerCase())); b.innerHTML=m.map(x=>`<div class="sug-item" onclick="$('q-cli').value='${x.name}';$('q-addr').value='${x.addr||''}';$('q-sug').classList.add('hidden')">${x.name}</div>`).join(''); b.classList.remove('hidden'); },
+                renderISearch: q => { $('q-item-results').innerHTML=AV.state.inv.filter(i=>i.name.toLowerCase().includes(q.toLowerCase())).slice(0,12).map(i=>`<div class="item-card" onclick="AV.Tools.addQ('${i.id}')"><div><div class="bold">${i.name}</div><div class="text-sm">SKU: ${i.id}</div></div><div class="tag t-pri">₹${i.price}</div></div>`).join(''); },
+                addQ: id => { const i=AV.state.inv.find(x=>x.id===id), ex=AV.quoteItems.find(x=>x.id===id); if(ex)ex.qty++; else AV.quoteItems.push({id:i.id,name:i.name,qty:1,price:i.price}); AV.Tools.rQ(); },
+                rQ: () => { $('t-quote').querySelector('tbody').innerHTML=AV.quoteItems.map((q,i)=>`<tr><td>${q.name}</td><td>${q.qty}</td><td>${q.price}</td><td>${q.qty*q.price}</td><td><button class="btn btn-dan btn-sm" onclick="AV.quoteItems.splice(${i},1);AV.Tools.rQ()">X</button></td></tr>`).join(''); $('q-tot').innerText=AV.quoteItems.reduce((a,b)=>a+b.qty*b.price,0).toFixed(2); },
+                printQ: () => {
+                    const h = `<div class="p-header" style="border-bottom:2px solid #000; padding-bottom:20px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:end;"><div><h1 style="font-size:24px; font-weight:800; margin:0;">ESTIMATE</h1><div style="font-size:12px; margin-top:5px;">ID: QT-${Date.now()}</div></div><div style="text-align:right;"><div><b>Date:</b> ${$('q-date').value}</div></div></div><div style="display:flex; justify-content:space-between; margin-bottom:40px;"><div style="width:45%"><div style="font-weight:bold; border-bottom:1px solid #ccc; margin-bottom:5px; padding-bottom:2px;">BILL TO</div><div>${$('q-cli').value}</div><div>${$('q-addr').value}</div></div><div style="width:45%"><div style="font-weight:bold; border-bottom:1px solid #ccc; margin-bottom:5px; padding-bottom:2px;">DETAILS</div><div>${$('q-subj').value}</div></div></div><table class="p-table"><thead><tr><th>Item Description</th><th>Qty</th><th>Unit Price</th><th style="text-align:right">Total</th></tr></thead><tbody>${AV.quoteItems.map(q=>`<tr><td>${q.name}</td><td>${q.qty}</td><td>${q.price}</td><td style="text-align:right">${q.qty*q.price}</td></tr>`).join('')}</tbody></table><div style="display:flex; justify-content:flex-end; margin-top:20px;"><div style="width:200px;"><div style="display:flex; justify-content:space-between; font-weight:800; font-size:16px; border-top:2px solid #000; padding-top:10px;"><span>Grand Total:</span><span>₹${$('q-tot').innerText}</span></div></div></div><div style="margin-top:50px; border-top:1px solid #eee; padding-top:10px; font-size:10px; color:#555;"><div style="font-weight:bold; margin-bottom:5px;">Terms & Notes:</div><div>${$('q-note').value}</div></div>`;
+                    $('print-zone').innerHTML=h; setTimeout(()=>window.print(),500);
+                }
+            },
+            Rep: {
+                stock: () => { const d=new window.jspdf.jsPDF(); d.text("Inventory Report",14,10); d.autoTable({head:[['SKU','Name','Qty','Cost','Price']], body:AV.state.inv.map(i=>[i.id,i.name,i.wh,i.cost,i.price])}); d.save('stock.pdf'); },
+                sales: () => { const d=new window.jspdf.jsPDF(); d.text("Sales Report",14,10); d.autoTable({head:[['Date','Cust','Total']], body:AV.state.sales.map(s=>[s.date,s.cust,s.total])}); d.save('sales.pdf'); }
+            }
+        };
+        window.onload = AV.Auth.init;
+    </script>
+</body>
+</html>
