@@ -197,7 +197,7 @@
                         <div class="glass">
                             <div class="flex between mb-2"><h3>Inventory Master</h3><button class="btn btn-pri" onclick="AV.UI.invModalNew()"><i class="ph ph-plus-circle"></i> Mint Item</button></div>
                             <div style="position:relative; margin-bottom:15px;"><i class="ph ph-magnifying-glass" style="position:absolute; left:12px; top:12px; color:var(--text-mute)"></i><input id="inv-s" placeholder="Search SKU, Name..." style="padding-left:36px;" onkeyup="AV.Util.debouncedInvRender(this.value)"></div>
-                            <div class="table-wrap"><table id="t-inv"><thead><tr><th>SKU</th><th>Name</th><th>Type</th><th>Stock (WH)</th><th>Loc</th><th>Cost</th><th>Price</th><th style="text-align:right">Actions</th></tr></thead><tbody></tbody></table></div>
+                            <div class="table-wrap"><table id="t-inv"><thead><tr><th>SKU</th><th>Name</th><th>Type</th><th>Stock (WH)</th><th>Loc</th><th>Price</th><th style="text-align:right">Actions</th></tr></thead><tbody></tbody></table></div>
                         </div>
                     </div>
                     <div id="inv-ser" class="sub-view">
@@ -395,7 +395,7 @@
         <h3 id="ni-title">Mint Stock</h3>
         <div id="ni-stats" class="hidden" style="margin-bottom:15px; padding:10px; background:rgba(255,255,255,0.05); border-radius:8px; display:flex; justify-content:space-between; font-size:12px;"></div>
         <input id="ni-n" placeholder="Item Name"><select id="ni-t"><option value="BATCH">Batch (Quantity only)</option><option value="SERIAL">Serialized (Unique ID)</option></select>
-        <div class="grid-2"><input id="ni-c" type="number" placeholder="Cost Price"><input id="ni-p" type="number" placeholder="Selling Price"></div>
+        <div class="grid-2"><input id="ni-c" type="number" placeholder="Cost Price (Internal Only)"><input id="ni-p" type="number" placeholder="Selling Price"></div>
         <div style="background:rgba(59, 130, 246, 0.1); padding:10px; border-radius:8px; margin-bottom:10px; border:1px solid rgba(59, 130, 246, 0.3);">
             <label id="ni-q-lbl" style="color:#fff">Current Warehouse Quantity</label><input id="ni-q" type="number" value="1" placeholder="Qty">
             <div class="text-sm" style="color:var(--neon-cyan)">* Set this to total available stock IN WAREHOUSE. Do not count sold items.</div>
@@ -684,9 +684,9 @@
                     const flt=AV.state.inv.filter(d=>d && !d.archived && ((d.name||'').toLowerCase().includes(q)||(d.id||'').toLowerCase().includes(q)));
                     tb.innerHTML = flt.slice(0,100).map(d => {
                         const w = d.type==='BATCH' ? d.wh : (AV.cache.unitCounts[d.id]||0), sId = String(d.id).replace(/'/g,"\\'");
-                        return `<tr><td><span class="tag t-pri">${d.id}</span></td><td class="bold">${d.name}</td><td><span class="tag">${d.type}</span></td><td style="color:${w<5?'var(--neon-pink)':'#fff'}">${w}</td><td>${d.loc||'-'}</td><td>${d.cost}</td><td>${d.price}</td><td style="text-align:right"><button class="btn btn-sec btn-sm" onclick="AV.Inv.edit('${sId}')"><i class="ph-bold ph-pencil"></i></button> <button class="btn btn-dan btn-sm" onclick="AV.Inv.del('${sId}')"><i class="ph-bold ph-trash"></i></button></td></tr>`;
+                        return `<tr><td><span class="tag t-pri">${d.id}</span></td><td class="bold">${d.name}</td><td><span class="tag">${d.type}</span></td><td style="color:${w<5?'var(--neon-pink)':'#fff'}">${w}</td><td>${d.loc||'-'}</td><td>${d.price}</td><td style="text-align:right"><button class="btn btn-sec btn-sm" onclick="AV.Inv.edit('${sId}')"><i class="ph-bold ph-pencil"></i></button> <button class="btn btn-dan btn-sm" onclick="AV.Inv.del('${sId}')"><i class="ph-bold ph-trash"></i></button></td></tr>`;
                     }).join('');
-                    if(flt.length>100) tb.innerHTML+=`<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--text-mute)">Showing 100 of ${flt.length} results</td></tr>`;
+                    if(flt.length>100) tb.innerHTML+=`<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--text-mute)">Showing 100 of ${flt.length} results</td></tr>`;
                     AV.Inv.renderUnits();
                 },
                 renderUnits: () => {
@@ -822,7 +822,7 @@
                 }
             },
             Rep: {
-                stock: () => { const d=new window.jspdf.jsPDF(); d.text("Inventory Report",14,10); d.autoTable({head:[['SKU','Name','Qty','Cost','Price']], body:AV.state.inv.map(i=>[i.id,i.name,i.wh,i.cost,i.price])}); d.save('stock.pdf'); },
+                stock: () => { const d=new window.jspdf.jsPDF(); d.text("Inventory Report",14,10); d.autoTable({head:[['SKU','Name','Qty','Price']], body:AV.state.inv.map(i=>[i.id,i.name,i.wh,i.price])}); d.save('stock.pdf'); },
                 sales: () => { const d=new window.jspdf.jsPDF(); d.text("Sales Report",14,10); d.autoTable({head:[['Date','Cust','Total']], body:AV.state.sales.map(s=>[s.date,s.cust,s.total])}); d.save('sales.pdf'); }
             }
         };
